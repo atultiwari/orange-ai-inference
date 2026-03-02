@@ -4,8 +4,8 @@ services:
   backend:
     build:
       context: ./backend
-    ports:
-      - "8080:8080"
+    expose:
+      - "8080"
     volumes:
       - backend_uploads:/app/uploaded_models
     restart: unless-stopped
@@ -15,8 +15,8 @@ services:
   frontend:
     build:
       context: ./frontend
-    ports:
-      - "80:80"
+    expose:
+      - "80"
     depends_on:
       - backend
     restart: unless-stopped
