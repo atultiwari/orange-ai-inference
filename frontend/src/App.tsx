@@ -24,7 +24,7 @@ type PredictionResult = {
   probabilities: Record<string, number>;
 };
 
-const API_BASE = 'http://localhost:8080/api';
+const API_BASE = '/api';
 
 function App() {
   const [file, setFile] = useState<File | null>(null);
@@ -82,18 +82,18 @@ function App() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setMetadata(response.data);
-      
+
       // Initialize form values
       const initialValues: Record<string, string | number> = {};
       response.data.features.forEach((f: Feature) => {
-          if (f.type === 'discrete' && f.values && f.values.length > 0) {
-              initialValues[f.name] = f.values[0];
-          } else {
-              initialValues[f.name] = '';
-          }
+        if (f.type === 'discrete' && f.values && f.values.length > 0) {
+          initialValues[f.name] = f.values[0];
+        } else {
+          initialValues[f.name] = '';
+        }
       });
       setFormValues(initialValues);
-      
+
     } catch (err: any) {
       setUploadError(err.response?.data?.detail || 'Failed to analyze model.');
     } finally {
@@ -114,16 +114,16 @@ function App() {
 
     setIsPredicting(true);
     setPredictError('');
-    
+
     // Ensure numeric values are numbers where appropriate
     const processedValues: Record<string, any> = {};
     for (const [key, val] of Object.entries(formValues)) {
-        const feature = metadata.features.find(f => f.name === key);
-        if (feature?.type === 'continuous') {
-           processedValues[key] = val === '' ? 0 : Number(val);
-        } else {
-           processedValues[key] = val;
-        }
+      const feature = metadata.features.find(f => f.name === key);
+      if (feature?.type === 'continuous') {
+        processedValues[key] = val === '' ? 0 : Number(val);
+      } else {
+        processedValues[key] = val;
+      }
     }
 
     const formData = new FormData();
@@ -143,7 +143,7 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans p-6 text-slate-800">
       <div className="max-w-6xl mx-auto space-y-8">
-        
+
         {/* Header */}
         <header className="flex items-center gap-4 border-b border-slate-200 pb-6 pt-4">
           <div className="bg-gradient-to-br from-teal-400 to-teal-600 p-3 rounded-xl text-white shadow-lg shadow-teal-500/30">
@@ -160,23 +160,23 @@ function App() {
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
+
           {/* Left Column: Upload & Form */}
           <div className="lg:col-span-7 space-y-6">
-            
+
             {/* Uploader Card */}
-            <motion.div 
-               initial={{ opacity: 0, y: 20 }}
-               animate={{ opacity: 1, y: 0 }}
-               className="glass-panel p-8 rounded-2xl relative overflow-hidden"
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="glass-panel p-8 rounded-2xl relative overflow-hidden"
             >
               <div className="absolute top-0 left-0 w-2 h-full bg-teal-500 rounded-l-2xl"></div>
               <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                 <UploadCloud className="text-teal-600 w-6 h-6" />
                 Step 1: Upload Model
               </h2>
-              
-              <div 
+
+              <div
                 onClick={() => fileInputRef.current?.click()}
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
@@ -184,14 +184,14 @@ function App() {
                   ${file ? 'border-teal-400 bg-teal-50/50' : 'border-slate-300 hover:border-teal-400 hover:bg-slate-50'}
                 `}
               >
-                <input 
-                  type="file" 
-                  accept=".pkcls" 
-                  className="hidden" 
+                <input
+                  type="file"
+                  accept=".pkcls"
+                  className="hidden"
                   ref={fileInputRef}
                   onChange={handleFileChange}
                 />
-                
+
                 {file ? (
                   <div className="flex flex-col items-center gap-3">
                     <div className="p-4 bg-teal-100 text-teal-700 rounded-full shadow-sm">
@@ -204,9 +204,9 @@ function App() {
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-3 text-slate-500">
-                     <UploadCloud className="w-12 h-12 text-slate-400" />
-                     <p className="font-medium">Click to browse or drag and drop</p>
-                     <p className="text-sm">Only Orange Data Mining .pkcls files</p>
+                    <UploadCloud className="w-12 h-12 text-slate-400" />
+                    <p className="font-medium">Click to browse or drag and drop</p>
+                    <p className="text-sm">Only Orange Data Mining .pkcls files</p>
                   </div>
                 )}
               </div>
@@ -219,7 +219,7 @@ function App() {
 
               {file && !metadata && (
                 <div className="mt-6 flex justify-end">
-                  <button 
+                  <button
                     onClick={uploadModel}
                     disabled={isUploading}
                     className="bg-slate-900 hover:bg-slate-800 text-white px-6 py-2.5 rounded-lg font-medium transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
@@ -256,7 +256,7 @@ function App() {
                               {feature.type}
                             </span>
                           </label>
-                          
+
                           {feature.type === 'discrete' && feature.values ? (
                             <select
                               value={formValues[feature.name] as string}
@@ -291,7 +291,7 @@ function App() {
                     )}
 
                     <div className="pt-4 flex justify-end">
-                      <button 
+                      <button
                         type="submit"
                         disabled={isPredicting}
                         className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-semibold transition-all shadow-lg hover:shadow-blue-600/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transform hover:-translate-y-0.5"
@@ -334,7 +334,7 @@ function App() {
                   <div>
                     <p className="text-sm text-slate-500 font-medium mb-4 uppercase tracking-wider">Class Probabilities</p>
                     <div className="space-y-4">
-                      {Object.entries(prediction.probabilities).sort((a,b) => b[1] - a[1]).map(([className, prob]) => (
+                      {Object.entries(prediction.probabilities).sort((a, b) => b[1] - a[1]).map(([className, prob]) => (
                         <div key={className}>
                           <div className="flex justify-between text-sm font-medium mb-1.5">
                             <span className="text-slate-700 truncate mr-2" title={className}>{className}</span>
@@ -343,7 +343,7 @@ function App() {
                             </span>
                           </div>
                           <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                            <motion.div 
+                            <motion.div
                               initial={{ width: 0 }}
                               animate={{ width: `${prob * 100}%` }}
                               transition={{ duration: 0.8, ease: "easeOut" }}
