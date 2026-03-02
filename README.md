@@ -70,7 +70,8 @@ The React frontend will be available at: http://localhost:5173
 This repository is optimized for one-click deployment via **Coolify**.
 1. Add this repository to your Coolify dashboard.
 2. Select **Docker Compose** as the build pack.
-3. Coolify will automatically parse the `docker-compose.yml`, build the multi-stage Nginx frontend, spin up the Python backend, and attach the necessary persistent volumes.
+3. Set the Docker Compose Location to `/docker-compose.prod.yml`. This production override file removes local host port bindings, allowing Coolify to safely route external traffic without conflicts.
+4. Coolify will automatically build the multi-stage Nginx frontend, spin up the Python backend, and attach the necessary persistent volumes.
 
 ## 🧠 Usage
 
