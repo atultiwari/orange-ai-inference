@@ -2,11 +2,24 @@ version: '3.8'
 
 services:
   backend:
-    ports: [] # Removes localhost binding
+    build:
+      context: ./backend
     expose:
-      - "8080" # Exposes port internally for Nginx proxy
+      - "8080"
+    volumes:
+      - backend_uploads:/app/uploaded_models
+    restart: unless-stopped
+    environment:
+      - TZ=UTC
 
   frontend:
-    ports: [] # Removes 80:80 localhost binding
+    build:
+      context: ./frontend
     expose:
-      - "80" # Exposes port internally to Coolify Traefik router
+      - "80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend_uploads:
