@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+backend/.venv/
+backend/uploaded_models/
+
+# Node / React
+frontend/node_modules/
+frontend/dist/
+frontend/.npm/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
