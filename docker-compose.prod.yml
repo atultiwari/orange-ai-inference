@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  backend:
+    ports: [] # Removes localhost binding
+    expose:
+      - "8080" # Exposes port internally for Nginx proxy
+
+  frontend:
+    ports: [] # Removes 80:80 localhost binding
+    expose:
+      - "80" # Exposes port internally to Coolify Traefik router
