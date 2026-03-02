@@ -29,8 +29,23 @@ This repository houses a modular Full-Stack application that lets you upload an 
 
 ## 🚀 Setup & Installation
 
-### 1. Start the Backend API
+You can run this project locally using either **Docker** (recommended) or **Native Python/Node**.
 
+### Option A: Running with Docker (Recommended)
+This approach mimics the production environment using Nginx as a reverse proxy for the API.
+
+1. Ensure Docker and Docker Compose are installed on your machine.
+2. Open your terminal in the root of the project.
+3. Run the following command:
+```bash
+docker-compose up --build
+```
+4. Once the containers are running, access the React frontend at: http://localhost
+   * *Note: The backend API runs internally on port 8080. Nginx handles the `/api` routing automatically.*
+
+### Option B: Running Natively (For Development)
+
+#### 1. Start the Backend API
 The backend relies on `Orange3` to parse the underlying model files accurately. 
 
 ```bash
@@ -42,14 +57,20 @@ uvicorn main:app --host 0.0.0.0 --port 8080 --reload
 ```
 The backend API documentation (Swagger UI) will be available at: http://localhost:8080/docs
 
-### 2. Start the Frontend Application
-
+#### 2. Start the Frontend Application
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 The React frontend will be available at: http://localhost:5173
+
+## ☁️ Deployment (Hostinger VPS via Coolify)
+
+This repository is optimized for one-click deployment via **Coolify**.
+1. Add this repository to your Coolify dashboard.
+2. Select **Docker Compose** as the build pack.
+3. Coolify will automatically parse the `docker-compose.yml`, build the multi-stage Nginx frontend, spin up the Python backend, and attach the necessary persistent volumes.
 
 ## 🧠 Usage
 
