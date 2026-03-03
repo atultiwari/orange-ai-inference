@@ -1,12 +1,15 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 import uvicorn
 import pickle
 import numpy as np
 import Orange
 import os
 import json
+import io
+import pandas as pd
+import math
 
 def get_base_var(attr, depth=0):
     """
@@ -191,6 +194,160 @@ async def predict(filename: str = Form(...), features_json: str = Form(...)):
          import traceback
          traceback.print_exc()
          raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+
+@app.post("/api/upload_csv")
+async def upload_csv(file: UploadFile = File(...)):
+    """
+    Parses an uploaded CSV file and returns its columns and unique values for discrete features.
+    """
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="Only CSV files are allowed.")
+    try:
+        content = await file.read()
+        df = pd.read_csv(io.BytesIO(content))
+        
+        columns_info = []
+        for col in df.columns:
+            col_type = "continuous"
+            unique_vals = []
+            
+            # If dtype is object or category or boolean, treat as discrete
+            if df[col].dtype == 'object' or df[col].dtype.name == 'category' or df[col].dtype == 'bool':
+                col_type = "discrete"
+                # Get unique values, drop NaNs, convert to string
+                unique_vals = [str(v) for v in df[col].dropna().unique().tolist()][:100] # Limit to 100
+                
+            columns_info.append({
+                "name": col,
+                "type": col_type,
+                "unique_values": unique_vals if col_type == "discrete" else []
+            })
+            
+        return {
+            "filename": file.filename,
+            "columns": columns_info,
+            "total_rows": len(df),
+            "message": "CSV loaded and analyzed successfully."
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to process CSV: {str(e)}")
+
+@app.post("/api/predict_batch")
+async def predict_batch(
+    file: UploadFile = File(...),
+    filename: str = Form(..., description="The model filename (.pkcls)"),
+    column_mapping: str = Form(..., description="JSON string mapping model features -> CSV columns"),
+    value_mapping: str = Form(..., description="JSON string mapping CSV discrete values -> Model discrete values")
+):
+    """
+    Executes a batch prediction on an uploaded CSV using a pre-uploaded model and a column/value mapping.
+    Returns the annotated CSV as a downloadable file.
+    """
+    try:
+        col_map = json.loads(column_mapping)
+        val_map = json.loads(value_mapping)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON format for mapping arguments.")
+        
+    model_path = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.exists(model_path):
+        raise HTTPException(status_code=404, detail="Model file not found. Please upload it first.")
+        
+    try:
+        with open(model_path, "rb") as f:
+            model = pickle.load(f)
+            
+        # Reconstruct raw domain
+        raw_vars = []
+        seen = set()
+        for attr in model.domain.attributes:
+            base = get_base_var(attr)
+            if base.name not in seen:
+                raw_vars.append(base)
+                seen.add(base.name)
+                
+        raw_domain = Orange.data.Domain(raw_vars, model.domain.class_var)
+        class_values = model.domain.class_var.values
+        
+        # Load CSV into Pandas
+        content = await file.read()
+        df = pd.read_csv(io.BytesIO(content))
+        
+        predictions = []
+        probabilities = []
+        
+        for index, row in df.iterrows():
+            data_row = []
+            # Map each attribute
+            for attr in raw_domain.attributes:
+                model_feat = attr.name
+                if model_feat not in col_map:
+                    data_row.append(math.nan)
+                    continue
+                    
+                csv_col = col_map[model_feat]
+                if csv_col not in df.columns:
+                    data_row.append(math.nan)
+                    continue
+                    
+                raw_val = row[csv_col]
+                if pd.isna(raw_val):
+                    data_row.append(math.nan)
+                    continue
+                    
+                if type(attr).__name__ == "ContinuousVariable":
+                    try:
+                        data_row.append(float(raw_val))
+                    except ValueError:
+                        data_row.append(math.nan)
+                elif type(attr).__name__ == "DiscreteVariable":
+                    raw_val_str = str(raw_val)
+                    
+                    # Apply value mapping if defined
+                    resolved_val = raw_val_str
+                    if model_feat in val_map and raw_val_str in val_map[model_feat]:
+                        resolved_val = val_map[model_feat][raw_val_str]
+                        
+                    if resolved_val in attr.values:
+                        data_row.append(float(attr.values.index(resolved_val)))
+                    else:
+                        data_row.append(math.nan)
+                        
+            # Append target
+            data_row.append(math.nan)
+            
+            # Predict
+            instance = Orange.data.Instance(raw_domain, data_row)
+            try:
+                pred_idx = model(instance)
+                predicted_class = class_values[int(pred_idx)]
+                probs = model(instance, model.Probs)
+                
+                predictions.append(predicted_class)
+                probabilities.append(round(float(max(probs)), 4))
+            except Exception as e:
+                predictions.append("Error")
+                probabilities.append(0.0)
+                
+        # Append results to the original dataframe
+        df['Predicted_Class'] = predictions
+        df['Confidence'] = probabilities
+        
+        # Stream response
+        stream = io.StringIO()
+        df.to_csv(stream, index=False)
+        stream.seek(0)
+        
+        response = StreamingResponse(iter([stream.getvalue()]), media_type="text/csv")
+        response.headers["Content-Disposition"] = f"attachment; filename=annotated_{file.filename.split('.')[0]}.csv"
+        return response
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Batch prediction failed: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
